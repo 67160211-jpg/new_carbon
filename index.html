@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carbon Intelligence Dashboard 📊</title>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+    /* ตั้งค่าสี (Color Palette) */
+    :root { 
+        --primary: #115e41;       /* เขียวเข้ม */
+        --primary-light: #18865c; /* เขียวสว่าง */
+        --accent: #2ecc71;        /* เขียวสด (เน้น) */
+        --bg-main: #f3f7f5;       /* พื้นหลังเทาอมเขียวอ่อนๆ */
+        --card-bg: #ffffff;       /* พื้นหลังการ์ดสีขาว */
+        --text-dark: #2c3e50;
+        --text-muted: #7f8c8d;
+        --border-color: #e2e8e4;
+    }
+
+    body { 
+        font-family: 'Prompt', sans-serif; 
+        background-color: var(--bg-main); 
+        margin: 0; 
+        padding: 0; 
+        color: var(--text-dark); 
+    }
+
+    /* แถบเมนูด้านบน */
+    .top-nav {
+        background: linear-gradient(135deg, var(--primary), var(--primary-light));
+        color: white;
+        padding: 15px 40px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .top-nav h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .status-badge {
+        background: rgba(255,255,255,0.2);
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+        backdrop-filter: blur(5px);
+    }
+
+    /* แถบเครื่องมือ (อัปโหลด, โหลดเทมเพลต) */
+    .toolbar {
+        background: var(--card-bg);
+        padding: 15px 40px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-family: 'Prompt', sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .btn-upload { background: var(--primary-light); color: white; }
+    .btn-upload:hover { background: var(--primary); transform: translateY(-1px); }
+    .btn-outline { background: white; color: var(--primary); border: 1px solid var(--primary-light); }
+    .btn-outline:hover { background: var(--bg-main); }
+    .btn-danger { background: #e74c3c; color: white; margin-left: auto; }
+    .btn-danger:hover { background: #c0392b; }
+    
+    /* ซ่อน Input File */
+    #fileInput { display: none; }
+
+    /* พื้นที่แสดงผลหลัก */
+    .dashboard-container {
+        padding: 30px 40px;
+        max-width: 1600px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+    }
+
+    /* การ์ดสถิติ (KPIs) */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+    }
+    .kpi-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        border-left: 5px solid var(--primary-light);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .kpi-title {
+        font-size: 14px;
+        color: var(--text-muted);
+        font-weight: 500;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+    }
+    .kpi-value-wrap {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+    }
+    .kpi-value {
+        font-size: 32px;
+        font-weight: 600;
+        color: var(--text-dark);
+    }
+    .kpi-unit {
+        font-size: 14px;
+        color: var(--text-muted);
+    }
+
+    /* สีพิเศษสำหรับการ์ด KPI บางอัน */
+    .kpi-card.credits { border-left-color: #f39c12; }
+    .kpi-card.cost { border-left-color: #e74c3c; }
+    .kpi-card.circular { border-left-color: #3498db; }
+    .kpi-card.avoided { border-left-color: #9b59b6; }
+
+    /* พื้นที่กราฟ */
+    .charts-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+    @media (max-width: 1024px) {
+        .charts-grid { grid-template-columns: 1fr; }
+    }
+    .chart-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    }
+    .chart-header {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--primary);
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .chart-wrapper {
+        position: relative;
+        height: 350px;
+        width: 100%;
+    }
+
+    /* พื้นที่แนะนำป่า (Forest Section) */
+    .forest-section {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    }
+    .forest-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+    }
+    /* สไตล์ของโปรเจกต์ป่าไม้ ที่จะถูกสร้างจาก script.js */
+    .forest-item {
+        background: var(--bg-main);
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+</style>
+</head>
+<body>
+
+    <div class="top-nav">
+        <h1>🌍 Carbon Intelligence Dashboard</h1>
+        <div class="status-badge" id="status">🟢 ระบบพร้อมใช้งาน</div>
+    </div>
+
+    <div class="toolbar">
+        <label for="fileInput" class="btn btn-upload">
+            📁 อัปโหลดไฟล์ Excel
+        </label>
+        <input type="file" id="fileInput" accept=".xlsx,.xls">
+        
+        <button id="downloadTemplate" class="btn btn-outline">
+            ⬇️ ดาวน์โหลด Template
+        </button>
+        
+        <button id="resetBtn" class="btn btn-danger">
+            🗑️ ล้างข้อมูลระบบ
+        </button>
+    </div>
+
+    <div class="dashboard-container">
+        
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-title">Total Rows (รายการ)</div>
+                <div class="kpi-value-wrap">
+                    <div class="kpi-value" id="totalRows">0</div>
+                </div>
+            </div>
+            
+            <div class="kpi-card">
+                <div class="kpi-title">Total Emissions</div>
+                <div class="kpi-value-wrap">
+                    <div class="kpi-value" id="totalEmission" style="color: var(--primary);">0</div>
+                    <div class="kpi-unit">kgCO₂e</div>
+                </div>
+            </div>
+
+            <div class="kpi-card credits">
+                <div class="kpi-title">Carbon Credits Needed</div>
+                <div class="kpi-value-wrap">
+                    <div class="kpi-value" id="carbonCredits" style="color: #f39c12;">0.00</div>
+                    <div class="kpi-unit">Credits</div>
+                </div>
+            </div>
+
+            <div class="kpi-card cost">
+                <div class="kpi-title">Offset Cost (Estimate)</div>
+                <div class="kpi-value-wrap">
+                    <div class="kpi-value" id="carbonCost" style="color: #e74c3c;">0</div>
+                    <div class="kpi-unit">฿ (บาท)</div>
+                </div>
+            </div>
+
+            <div class="kpi-card circular">
+                <div class="kpi-title">Circular Resource</div>
+                <div class="kpi-value-wrap">
+                    <div class="kpi-value" id="circularPercent" style="color: #3498db;">0</div>
+                    <div class="kpi-unit">%</div>
+                </div>
+            </div>
+
+            <div class="kpi-card avoided">
+                <div class="kpi-title">Carbon Avoided</div>
+                <div class="kpi-value-wrap">
+                    <div class="kpi-value" id="carbonSaved" style="color: #9b59b6;">0</div>
+                    <div class="kpi-unit">tonCO₂e</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <div class="chart-header">📊 สัดส่วน Emissions แยกตาม Scope</div>
+                <div class="chart-wrapper">
+                    <canvas id="scopeChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-header">📈 เปรียบเทียบปริมาณการปล่อยก๊าซ (kgCO₂e)</div>
+                <div class="chart-wrapper">
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="forest-section">
+            <div class="chart-header" style="margin-bottom: 0;">🌳 พื้นที่ป่าแนะนำสำหรับชดเชยคาร์บอน (Offset Projects)</div>
+            <div id="forest-list" class="forest-list">
+                <p style="color:#999; font-size:14px; text-align:center; width: 100%; grid-column: 1 / -1; padding: 20px 0;">
+                    รอการประเมิน... กรุณาอัปโหลดไฟล์เพื่อคำนวณ Credits
+                </p>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
