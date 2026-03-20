@@ -27,6 +27,23 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // 🌟 ส่วนของ Manual Modal (เพิ่มเข้าไปใหม่)
+    const modal = document.getElementById("manualModal");
+    const btn = document.getElementById("openManual");
+    const span = document.getElementById("closeManual");
+
+    if (btn && modal) {
+        btn.onclick = () => { modal.style.display = "block"; };
+    }
+    if (span && modal) {
+        span.onclick = () => { modal.style.display = "none"; };
+    }
+    window.onclick = (event) => {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    };
+
     const resetBtn = document.getElementById("resetBtn");
     if (resetBtn) {
         resetBtn.addEventListener("click", async () => {

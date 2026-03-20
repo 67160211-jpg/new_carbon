@@ -202,7 +202,12 @@
 
     <div class="top-nav">
         <h1>🌍 Carbon Intelligence Dashboard</h1>
-        <div class="status-badge" id="status">🟢 ระบบพร้อมใช้งาน</div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button id="openManual" class="btn" style="background-color: #f39c12; color: white; padding: 5px 15px; font-size: 14px;">
+                📖 คู่มือการใช้งาน
+            </button>
+            <div class="status-badge" id="status">🟢 ระบบพร้อมใช้งาน</div>
+        </div>
     </div>
 
     <div class="toolbar">
@@ -296,6 +301,34 @@
         </div>
 
     </div>
+
+    <div id="manualModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.8);">
+        <div style="background-color:white; margin:2% auto; padding:15px; width:85%; height:90%; border-radius:10px; position:relative;">
+            <span id="closeManual" style="position:absolute; right:20px; top:10px; cursor:pointer; font-size:30px; font-weight:bold; color:#333;">&times;</span>
+            <h2 style="margin-top:0; font-size:18px;">📖 คู่มือการใช้งานไฟล์เทมเพลต</h2>
+            <iframe src="Manual.pdf" width="100%" height="92%" style="border:1px solid #ddd; border-radius:5px;"></iframe>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const modal = document.getElementById("manualModal");
+            const btn = document.getElementById("openManual");
+            const span = document.getElementById("closeManual");
+
+            if (btn) {
+                btn.onclick = () => { modal.style.display = "block"; };
+            }
+            if (span) {
+                span.onclick = () => { modal.style.display = "none"; };
+            }
+            window.onclick = (event) => {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            };
+        });
+    </script>
 
     <script src="script.js"></script>
 </body>
